@@ -146,6 +146,6 @@ instance (Eq k, Hashable k) => Semigroup (SCDict k v) where
 instance (Eq k, Hashable k) => Monoid (SCDict k v) where
   mempty = empty
 
--- Show instance 
+-- Show instance
 instance (Show k, Show v) => Show (SCDict k v) where
   show dict = "SCDict " ++ show (toList dict)

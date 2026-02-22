@@ -11,7 +11,7 @@ import Test.QuickCheck
 import Prelude hiding (lookup)
 
 instance (Arbitrary k, Arbitrary v, Hashable k) => Arbitrary (SCDict k v) where
-    arbitrary = fromList <$> arbitrary
+  arbitrary = fromList <$> arbitrary
 
 spec :: Spec
 spec = do
@@ -66,24 +66,24 @@ spec = do
   describe "mapValues" $ do
     it "applies function to all values" $
       property $ \k v d ->
-        lookup k (mapValues (+1) (insert k v (d :: SCDict Int Int))) == Just (v + 1)
+        lookup k (mapValues (+ 1) (insert k v (d :: SCDict Int Int))) == Just (v + 1)
     it "does not change size" $
       property $ \d ->
-        size (mapValues (+1) (d :: SCDict Int Int)) == size d
+        size (mapValues (+ 1) (d :: SCDict Int Int)) == size d
     it "does not change keys" $
       property $ \d ->
-        let mapped = mapValues (+1) (d :: SCDict Int Int)
-        in all (\k -> lookup k mapped /= Nothing) (keys d)
+        let mapped = mapValues (+ 1) (d :: SCDict Int Int)
+         in all (\k -> lookup k mapped /= Nothing) (keys d)
 
   describe "filterDict" $ do
     it "removes entries that do not satisfy predicate" $
       property $ \d ->
         let filtered = filterDict (\_ v -> v > 0) (d :: SCDict Int Int)
-        in all (\(_, v) -> v > 0) (toList filtered)
+         in all (\(_, v) -> v > 0) (toList filtered)
     it "keeps entries that satisfy predicate" $
       property $ \d ->
         let filtered = filterDict (\_ v -> v > 0) (d :: SCDict Int Int)
-        in all (\(k, v) -> if v > 0 then lookup k filtered == Just v else True) (toList d)
+         in all (\(k, v) -> if v > 0 then lookup k filtered == Just v else True) (toList d)
     it "filter with const True does not change dict" $
       property $ \d ->
         filterDict (\_ _ -> True) (d :: SCDict Int Int) == d
@@ -98,7 +98,7 @@ spec = do
     it "collects all keys" $
       property $ \d ->
         let ks = foldLeft (\acc (k, _) -> k : acc) [] (d :: SCDict Int Int)
-        in length ks == size d
+         in length ks == size d
 
   describe "foldRight" $ do
     it "toList via foldRight has correct length" $
@@ -111,7 +111,7 @@ spec = do
     it "size after inserts" $
       property $ \kvs ->
         let d = (fromList kvs) :: SCDict Int Int
-        in size d == length (toList d)
+         in size d == length (toList d)
 
   describe "keys" $ do
     it "all keys are present in dict" $
@@ -138,7 +138,7 @@ spec = do
     it "fromList then toList contains all unique keys" $
       property $ \kvs ->
         let d = (fromList kvs) :: SCDict Int Int
-        in all (\(k, v) -> lookup k d == Just v) (toList d)
+         in all (\(k, v) -> lookup k d == Just v) (toList d)
     it "later values overwrite earlier for duplicate keys" $
       property $ \k v1 v2 ->
         lookup k (fromList [(k, v1), (k, v2)] :: SCDict Int Int) == Just v2
@@ -147,33 +147,33 @@ spec = do
     it "keys from both dicts are present" $
       property $ \d1 d2 ->
         let merged = union d1 (d2 :: SCDict Int Int)
-        in all (\k -> lookup k merged /= Nothing) (keys d1 ++ keys d2)
+         in all (\k -> lookup k merged /= Nothing) (keys d1 ++ keys d2)
     it "d1 takes priority over d2 on conflict" $
       property $ \k v1 v2 ->
         let d1 = insert k v1 (empty :: SCDict Int Int)
             d2 = insert k v2 empty
-        in lookup k (union d1 d2) == Just v1
+         in lookup k (union d1 d2) == Just v1
 
   describe "Monoid axioms" $ do
-      it "left identity" $
-          property $ \dict ->
-              (mempty <> dict :: SCDict String Int) == dict
+    it "left identity" $
+      property $ \dict ->
+        (mempty <> dict :: SCDict String Int) == dict
 
-      it "right identity" $
-          property $ \dict ->
-              (dict <> mempty :: SCDict String Int) == dict
+    it "right identity" $
+      property $ \dict ->
+        (dict <> mempty :: SCDict String Int) == dict
 
-      it "associativity" $
-          property $ \a b c ->
-              ((a <> b) <> c :: SCDict String Int) == (a <> (b <> c))
+    it "associativity" $
+      property $ \a b c ->
+        ((a <> b) <> c :: SCDict String Int) == (a <> (b <> c))
 
-      it "union merges keys" $
-        property $ \a b (k :: Int) ->
-          let merged = a <> (b :: SCDict Int Int)
-          in case (lookup k a, lookup k b) of
-                (Just v, _) -> lookup k merged == Just v
-                (Nothing, Just v) -> lookup k merged == Just v
-                (Nothing, Nothing) -> lookup k merged == Nothing
+    it "union merges keys" $
+      property $ \a b (k :: Int) ->
+        let merged = a <> (b :: SCDict Int Int)
+         in case (lookup k a, lookup k b) of
+              (Just v, _) -> lookup k merged == Just v
+              (Nothing, Just v) -> lookup k merged == Just v
+              (Nothing, Nothing) -> lookup k merged == Nothing
 
 main :: IO ()
 main = hspec spec
