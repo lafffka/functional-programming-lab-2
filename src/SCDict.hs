@@ -3,6 +3,7 @@ module SCDict
   )
 where
 
+import Data.Bifunctor (second)
 import Data.Hashable (Hashable, hash)
 import qualified Data.List as List
 import Dict
@@ -88,14 +89,14 @@ instance Dict SCDict where
   mapValues f dict =
     let newBuckets =
           map
-            (map (\(k, v) -> (k, f v)))
+            (map (second f))
             (buckets dict)
      in dict {buckets = newBuckets}
 
   filterDict p dict =
     let newBuckets =
           map
-            (filter (\(k, v) -> p k v))
+            (filter (uncurry p))
             (buckets dict)
      in dict {buckets = newBuckets}
 
