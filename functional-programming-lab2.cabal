@@ -25,7 +25,7 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      SCDict
   other-modules:
       Paths_functional_programming_lab2
   autogen-modules:
@@ -35,25 +35,13 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
-  default-language: Haskell2010
-
-executable functional-programming-lab2-exe
-  main-is: Main.hs
-  other-modules:
-      Paths_functional_programming_lab2
-  autogen-modules:
-      Paths_functional_programming_lab2
-  hs-source-dirs:
-      app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      base >=4.7 && <5
-    , functional-programming-lab2
+    , hashable
+    , vector
   default-language: Haskell2010
 
 test-suite functional-programming-lab2-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
       Paths_functional_programming_lab2
   autogen-modules:
@@ -62,6 +50,14 @@ test-suite functional-programming-lab2-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      HUnit
+    , QuickCheck
+    , base >=4.7 && <5
     , functional-programming-lab2
+    , hashable
+    , hspec
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , vector
   default-language: Haskell2010
