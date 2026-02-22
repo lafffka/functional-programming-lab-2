@@ -1,152 +1,151 @@
 module SCDict
-    ( Dict
-    , empty
-    , insert
-    , delete
-    , lookup
-    , mapValues
-    , filterDict
-    , foldLeft
-    , foldRight
-    , size
-    , keys
-    , values
-    , toList
-    , union
-    ) where
+  ( SCDict,
+  )
+where
 
-import Prelude hiding (lookup)
-import qualified Data.List as List
 import Data.Hashable (Hashable, hash)
+import qualified Data.List as List
+import Dict
+import Prelude hiding (lookup)
 
 type Bucket k v = [(k, v)]
 
-data Dict k v = Dict
-    { numBuckets :: Int
-    , bucketList :: [Bucket k v]
-    } deriving (Show)
+data SCDict k v = SCDict
+  { numBuckets :: Int,
+    buckets :: [Bucket k v]
+  }
 
-instance (Hashable k, Eq k, Eq v) => Eq (Dict k v) where
-    d1 == d2 = size d1 == size d2 && all (\(k, v) -> lookup k d2 == Just v) (toList d1)
+-- Internal helper functions
+defaultSize :: Int
+defaultSize = 16
 
--- empty
-empty :: Dict k v
-empty = Dict { numBuckets = defaultSize, bucketList = replicate defaultSize [] }
-    where defaultSize = 16
-
-bucketIndex :: Hashable k => k -> Int -> Int
-bucketIndex key bucketsCount = abs (hash key) `mod` bucketsCount
+bucketIndex :: (Hashable k) => k -> Int -> Int
+bucketIndex key bucketsCount =
+  abs (hash key) `mod` bucketsCount
 
 updateAt :: Int -> a -> [a] -> [a]
 updateAt _ _ [] = []
-updateAt 0 new (_:rest) = new : rest
-updateAt i new (x:rest) = x : updateAt (i-1) new rest
+updateAt 0 new (_ : xs) = new : xs
+updateAt i new (x : xs) = x : updateAt (i - 1) new xs
 
-insertInBucket :: Eq k => k -> v -> Bucket k v -> Bucket k v
+insertInBucket :: (Eq k) => k -> v -> Bucket k v -> Bucket k v
 insertInBucket key val [] = [(key, val)]
-insertInBucket key val ((k, v) : rest)
-    | key == k = (key, val) : rest
-    | otherwise = (k, v) : insertInBucket key val rest
+insertInBucket key val ((k, v) : xs)
+  | key == k = (key, val) : xs
+  | otherwise = (k, v) : insertInBucket key val xs
 
--- insert operation
-insert :: (Hashable k) => k -> v -> Dict k v -> Dict k v
-insert key val hmap = 
-    let idx = bucketIndex key ( numBuckets hmap )
-        oldBucket = bucketList hmap !! idx
-        newBucket = insertInBucket key val oldBucket
-        newBuckets = updateAt idx newBucket (bucketList hmap)
-    in hmap { bucketList = newBuckets }
-
-deleteFromBucket :: Eq k => k -> Bucket k v -> Bucket k v
+deleteFromBucket :: (Eq k) => k -> Bucket k v -> Bucket k v
 deleteFromBucket _ [] = []
-deleteFromBucket key ((k, v) : rest)
-    | key == k = rest
-    | otherwise = (k, v) : deleteFromBucket key rest
+deleteFromBucket key ((k, v) : xs)
+  | key == k = xs
+  | otherwise = (k, v) : deleteFromBucket key xs
 
--- delete operation
-delete :: (Hashable k) => k -> Dict k v -> Dict k v
-delete key hmap =
-    let idx = bucketIndex key ( numBuckets hmap )
-        oldBucket = bucketList hmap !! idx
-        newBucket = deleteFromBucket key oldBucket
-        newBuckets = updateAt idx newBucket ( bucketList hmap )
-    in hmap { bucketList = newBuckets }
-
--- lookup operation
-lookup :: (Hashable k) => k -> Dict k v -> Maybe v
-lookup key hmap = 
-    let idx = bucketIndex key ( numBuckets hmap )
-        bucket = bucketList hmap !! idx
-    in List.lookup key bucket
-
-
-foldLeftBucket :: (acc -> (k, v) -> acc) -> acc -> Bucket k v -> acc
+foldLeftBucket ::
+  (acc -> (k, v) -> acc) ->
+  acc ->
+  Bucket k v ->
+  acc
 foldLeftBucket _ acc [] = acc
-foldLeftBucket f acc (pair:rest) = foldLeftBucket f (f acc pair) rest
+foldLeftBucket f acc (x : xs) =
+  foldLeftBucket f (f acc x) xs
 
-foldRightBucket :: ((k, v) -> acc -> acc) -> acc -> Bucket k v -> acc
+foldRightBucket ::
+  ((k, v) -> acc -> acc) ->
+  acc ->
+  Bucket k v ->
+  acc
 foldRightBucket _ acc [] = acc
-foldRightBucket f acc (pair:rest) = f pair (foldRightBucket f acc rest)
+foldRightBucket f acc (x : xs) =
+  f x (foldRightBucket f acc xs)
 
--- foldLeft operation
-foldLeft :: (acc -> (k, v) -> acc) -> acc -> Dict k v -> acc
--- foldLeft f initAcc hmap = foldl' (foldl' f) initAcc (bucketList hmap)
-foldLeft f initAcc hmap = go initAcc (bucketList hmap)
+-- Instance Dict
+instance Dict SCDict where
+  empty =
+    SCDict
+      { numBuckets = defaultSize,
+        buckets = replicate defaultSize []
+      }
+
+  insert key val dict =
+    let idx = bucketIndex key (numBuckets dict)
+        oldBucket = buckets dict !! idx
+        newBucket = insertInBucket key val oldBucket
+        newBuckets = updateAt idx newBucket (buckets dict)
+     in dict {buckets = newBuckets}
+
+  delete key dict =
+    let idx = bucketIndex key (numBuckets dict)
+        oldBucket = buckets dict !! idx
+        newBucket = deleteFromBucket key oldBucket
+        newBuckets = updateAt idx newBucket (buckets dict)
+     in dict {buckets = newBuckets}
+
+  lookup key dict =
+    let idx = bucketIndex key (numBuckets dict)
+        bucket = buckets dict !! idx
+     in List.lookup key bucket
+
+  mapValues f dict =
+    let newBuckets =
+          map
+            (map (\(k, v) -> (k, f v)))
+            (buckets dict)
+     in dict {buckets = newBuckets}
+
+  filterDict p dict =
+    let newBuckets =
+          map
+            (filter (\(k, v) -> p k v))
+            (buckets dict)
+     in dict {buckets = newBuckets}
+
+  foldLeft f acc dict =
+    go acc (buckets dict)
     where
-        go acc [] = acc
-        go acc (bucket:rest) = go (foldLeftBucket f acc bucket) rest
+      go a [] = a
+      go a (b : rest) =
+        go (foldLeftBucket f a b) rest
 
--- foldRight operation
-foldRight :: ((k, v) -> acc -> acc) -> acc -> Dict k v -> acc
--- foldRight f initAcc hmap = foldr (\bucket acc -> foldr f acc bucket) initAcc (bucketList hmap)
-foldRight f initAcc hmap = go (bucketList hmap)
+  foldRight f acc dict =
+    go (buckets dict)
     where
-        go [] = initAcc
-        go (bucket:rest) = foldRightBucket f (go rest) bucket
+      go [] = acc
+      go (b : rest) =
+        foldRightBucket f (go rest) b
 
-size :: Dict k v -> Int
--- size hmap = foldLeft (\acc _ -> acc + 1) 0 hmap
-size hmap = foldRight (\_ acc -> acc + 1) 0 hmap
+  size =
+    foldRight (\_ acc -> acc + 1) 0
 
-keys :: Dict k v -> [k]
--- keys hmap = foldRight (\(k, _) acc -> k : acc) [] hmap
-keys hmap = foldLeft (\acc (k, _) -> k : acc) [] hmap
+  keys =
+    foldLeft (\acc (k, _) -> k : acc) []
 
-values :: Dict k v -> [v]
--- values hmap = foldRight (\(_, v) acc -> v : acc) [] hmap
-values hmap = foldLeft (\acc (_, v) -> v : acc) [] hmap
+  values =
+    foldLeft (\acc (_, v) -> v : acc) []
 
-toList :: Dict k v -> [(k, v)]
-toList hmap = foldRight (:) [] hmap
--- toList hmap = foldLeft (\acc pair -> pair : acc) [] hmap
+  toList =
+    foldRight (:) []
 
-mapPair :: (v -> w) -> (k, v) -> (k, w)
-mapPair f (k, v) = (k, f v)
+  fromList =
+    foldl (\d (k, v) -> insert k v d) empty
 
--- mapBucket
-mapBucket :: (v -> w) -> Bucket k v -> Bucket k w
-mapBucket f bucket = map (mapPair f) bucket
+  union d1 d2 =
+    foldLeft (\acc (k, v) -> insert k v acc) d2 d1
 
-mapValues :: (v -> w) -> Dict k v -> Dict k w
-mapValues f hmap = hmap { bucketList = map (mapBucket f) (bucketList hmap) }
+-- Eq instance
+instance (Eq k, Eq v, Hashable k) => Eq (SCDict k v) where
+  d1 == d2 =
+    size d1 == size d2
+      && all
+        (\(k, v) -> lookup k d2 == Just v)
+        (toList d1)
 
-filterBucket :: (k -> v -> Bool) -> Bucket k v -> Bucket k v
--- filterBucket p bucket = filter (\(k, v) -> p k v)
-filterBucket _ [] = []
-filterBucket p ((k, v) : rest)
-    | p k v = (k, v) : filterBucket p rest
-    | otherwise = filterBucket p rest
+-- Monoid instance
+instance (Eq k, Hashable k) => Semigroup (SCDict k v) where
+  (<>) = union
 
--- filterDict
-filterDict :: (k -> v -> Bool) -> Dict k v -> Dict k v
-filterDict p hmap = hmap { bucketList = map (filterBucket p) (bucketList hmap) }
+instance (Eq k, Hashable k) => Monoid (SCDict k v) where
+  mempty = empty
 
--- union
-union :: (Hashable k) => Dict k v -> Dict k v -> Dict k v
-union d1 d2 = foldLeft (\acc (k, v) -> insert k v acc) d2 d1
-
-instance (Hashable k, Eq k) => Semigroup (Dict k v) where
-    (<>) = union
-
-instance (Hashable k, Eq k) => Monoid (Dict k v) where
-    mempty = empty
+-- Show instance 
+instance (Show k, Show v) => Show (SCDict k v) where
+  show dict = "SCDict " ++ show (toList dict)
